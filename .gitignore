@@ -1,0 +1,25 @@
+# Swift / Xcode
+.build/
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+DerivedData/
+
+# macOS
+.DS_Store
+.DS_Store?
+Thumbs.db
+
+# App bundle (built product)
+Dclean.app/
+
+# DMG builds
+*.dmg
+
+# IDE
+.idea/
+.vscode/
+
+# Secrets / local config
+*.env
+*.local

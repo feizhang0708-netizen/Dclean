@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root {
+  --bg: #060a14; --surface: #080f20; --surface2: #0b1428;
+  --card: rgba(14,22,44,0.55); --card-hover: rgba(16,26,52,0.65);
+  --card-border: rgba(255,255,255,0.06); --card-border-hover: rgba(255,255,255,0.12);
+  --accent: #ff7b4a; --accent-glow: rgba(255,123,74,0.25);
+  --text: #ffffff; --text2: #e0dcd6; --muted: #b0b5c0;
+  --dim: rgba(255,255,255,0.06); --dim2: rgba(255,255,255,0.10);
+  --red: #ff5367; --green: #00c896; --warning: #ffb347;
+  --radius: 16px; --radius-sm: 10px;
+  --font: -apple-system,BlinkMacSystemFont,'SF Pro Display','PingFang SC',sans-serif;
+  --font-mono: 'SF Mono','JetBrains Mono',monospace;
+  --transition: 0.25s cubic-bezier(0.4,0,0.2,1);
+  --transition-fast: 0.15s cubic-bezier(0.4,0,0.2,1);
+  --shadow-card: 0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.03);
+  --shadow-card-hover: 0 12px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body {
+  font-family:var(--font); background:var(--bg); color:var(--text);
+  overflow:hidden; user-select:none; -webkit-user-select:none;
+  height:100vh; display:flex; font-size:16px; line-height:1.5; font-weight:500;
+  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+}
+body::before{content:'';position:fixed;top:-30%;left:-20%;width:80%;height:80%;background:radial-gradient(ellipse at center,rgba(255,123,74,.05) 0%,transparent 70%);pointer-events:none;z-index:0}
+body::after{content:'';position:fixed;bottom:-20%;right:-15%;width:60%;height:60%;background:radial-gradient(ellipse at center,rgba(0,232,180,.03) 0%,transparent 70%);pointer-events:none;z-index:0}
+
+.sidebar {
+  width:200px; background:linear-gradient(180deg, rgba(10,16,32,0.95), rgba(8,14,28,0.98));
+  border-right:1px solid var(--dim); display:flex; flex-direction:column;
+  padding:20px 0; position:relative; z-index:1;
+  backdrop-filter:blur(30px) saturate(120%); -webkit-backdrop-filter:blur(30px) saturate(120%);
+}
+.sidebar-logo {
+  padding:0 18px 24px; font-size:26px; font-weight:800;
+  color:var(--accent); letter-spacing:-0.5px; display:flex; align-items:center; gap:8px;
+}
+.sidebar-logo::after {
+  content:'PRO'; font-size:8px; font-weight:700; background:var(--accent);
+  color:#fff; padding:2px 5px; border-radius:3px; letter-spacing:1px; margin-top:2px;
+}
+.sidebar-nav {flex:1; display:flex; flex-direction:column; gap:1px; padding:0 10px}
+.nav-item {
+  padding:10px 12px; border-radius:9px; cursor:pointer; font-size:16px; font-weight:700;
+  color:var(--muted); transition:all var(--transition); display:flex; align-items:center; gap:8px;
+  position:relative; border-left:3px solid transparent;
+}
+.nav-item svg {width:18px;height:18px;opacity:.5;transition:all var(--transition)}
+.nav-item.active {
+  background:linear-gradient(135deg,rgba(255,123,74,.2),rgba(255,123,74,.05));
+  color:#fff; border-left-color:var(--accent);
+  box-shadow:0 0 20px rgba(255,123,74,.08);
+}
+.nav-item.active svg {opacity:1;color:var(--accent)}
+.nav-item:not(.active):hover {background:var(--dim2);color:var(--text2)}
+.nav-item:not(.active):hover svg {opacity:.8}
+.sidebar-footer {
+  padding:14px 18px; font-size:9px; color:rgba(255,255,255,.12);
+  border-top:1px solid var(--dim); margin:0 14px; letter-spacing:.5px;
+}
+.live-dot {display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--accent);margin-left:auto;animation:livePulse 2s ease-in-out infinite}
+@keyframes livePulse {0%,100%{opacity:1;box-shadow:0 0 4px var(--accent-glow)}50%{opacity:.3;box-shadow:0 0 0 var(--accent-glow)}}
+
+.main {flex:1;overflow-y:auto;padding:28px 32px;position:relative;z-index:1;scroll-behavior:smooth}
+.page {display:none;animation:fadeIn .3s ease}
+.page.active {display:block}
+@keyframes fadeIn {from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideUp {from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.page-title {font-size:28px;font-weight:800;margin-bottom:4px;color:var(--text);letter-spacing:-0.5px}
+.page-sub {font-size:15px;color:var(--text2);margin-bottom:22px;font-weight:500}
+
+.card {
+  background:transparent;
+  border:1px solid rgba(255,255,255,0.05); border-radius:var(--radius);
+  padding:20px 24px; margin-bottom:14px;
+  transition:border-color var(--transition);
+}
+.card:hover {border-color:rgba(255,255,255,0.1)}
+.card-title {font-size:16px;font-weight:700;color:var(--text);margin-bottom:12px;text-transform:uppercase;letter-spacing:.8px}
+
+.gauges-row {display:flex;gap:36px;align-items:flex-start;flex-wrap:wrap}
+.gauge-wrap {display:flex;align-items:center;gap:20px}
+.gauge-canvas-wrap {position:relative;width:148px;height:148px;flex-shrink:0;filter:drop-shadow(0 4px 12px rgba(0,0,0,.3))}
+.gauge-canvas-wrap canvas {width:100%;height:100%}
+.gauge-center {position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.gauge-pct {font-size:36px;font-weight:800;color:var(--text);line-height:1.1;letter-spacing:-1px;transition:color .3s ease}
+.gauge-label {font-size:12px;color:var(--text2);margin-top:3px;font-weight:500}
+.gauge-stats {display:flex;flex-direction:column;gap:7px;flex:1;min-width:170px}
+.stat-row {display:flex;justify-content:space-between;align-items:center;padding:7px 0;transition:all var(--transition-fast)}
+.stat-label {font-size:15px;color:var(--text);font-weight:700}
+.stat-value {font-size:18px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:-0.3px}
+.stat-value.green {color:var(--green)} .stat-value.accent {color:var(--accent)}
+
+.sparkline {margin-top:6px;width:148px;height:28px;opacity:.5;border-radius:4px}
+
+.btn {padding:10px 22px;border-radius:22px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all var(--transition);display:inline-flex;align-items:center;gap:6px;letter-spacing:.2px;position:relative;overflow:hidden}
+.btn::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 0%,rgba(0,0,0,.1) 100%);border-radius:inherit;pointer-events:none}
+.btn-primary {background:linear-gradient(135deg,var(--accent),#e55a2e);color:#fff;box-shadow:0 2px 8px rgba(255,123,74,.25)}
+.btn-primary:hover {transform:translateY(-1px) scale(1.02);box-shadow:0 4px 16px rgba(255,123,74,.35)}
+.btn-primary:active {transform:scale(.97)}
+.btn-secondary {background:rgba(255,255,255,0.08);color:var(--text);border:1px solid rgba(255,255,255,0.12);box-shadow:none}
+.btn-secondary:hover {transform:translateY(-1px);background:rgba(255,255,255,0.14);border-color:rgba(255,255,255,0.2)}
+.btn-outline {background:rgba(255,255,255,.03);border:1px solid var(--dim);color:var(--text2)}
+.btn-outline:hover {border-color:rgba(255,255,255,.25);color:#fff;background:rgba(255,255,255,.05)}
+.btn:disabled {opacity:.35;pointer-events:none;filter:grayscale(30%)}
+.btn-row {display:flex;gap:10px;margin-top:16px;align-items:center}
+
+.status-msg {font-size:14px;margin-top:10px;min-height:16px;font-weight:600}
+.status-msg.success {color:var(--green)} .status-msg.error {color:var(--red)}
+
+.disk-bar-wrap {display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.disk-row {display:flex;align-items:center;gap:12px}
+.disk-name {width:85px;font-size:14px;color:var(--text2);text-align:right;flex-shrink:0;font-weight:600}
+.disk-bar-bg {flex:1;height:7px;background:rgba(255,255,255,0.06);border-radius:4px;overflow:hidden}
+.disk-bar-fill {height:100%;border-radius:4px;transition:width .6s cubic-bezier(.4,0,.2,1);box-shadow:0 0 8px currentColor}
+.disk-info {width:150px;font-size:14px;color:var(--text2);flex-shrink:0;font-variant-numeric:tabular-nums}
+
+.junk-header,.net-header {display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.junk-group {margin-bottom:14px}
+.junk-group-header {display:flex;align-items:center;gap:7px;font-size:15px;font-weight:700;color:var(--text2);margin-bottom:6px;padding:6px 0;cursor:pointer;transition:color .2s}
+.junk-group-header:hover {color:#fff}
+.junk-group-header .arrow {transition:transform .25s;font-size:9px;color:var(--muted)}
+.junk-group-header.collapsed .arrow {transform:rotate(-90deg)}
+.junk-group-body {display:flex;flex-direction:column;gap:3px}
+.junk-group-body.hidden {display:none}
+.junk-item {display:flex;align-items:center;gap:10px;padding:9px 0;border-radius:9px;transition:all var(--transition-fast);cursor:pointer;border:1px solid transparent}
+.junk-item:hover {transform:translateX(3px)}
+.junk-check {width:18px;height:18px;border-radius:5px;border:2px solid var(--muted);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.junk-item.selected .junk-check {background:var(--accent);border-color:var(--accent);box-shadow:0 0 8px rgba(255,123,74,.3)}
+.junk-check svg {width:9px;height:9px;display:none;stroke:white;stroke-width:3}
+.junk-item.selected .junk-check svg {display:block}
+.junk-info {flex:1;min-width:0}
+.junk-name {font-size:15px;font-weight:600;color:var(--text)}
+.junk-path {font-size:13px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.8}
+.junk-size {font-size:14px;font-weight:600;color:var(--text2);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+.progress-wrap {display:none;margin-top:12px}
+.progress-wrap.active {display:block}
+.progress-bar-bg {height:5px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;margin-bottom:6px}
+.progress-bar-fill {height:100%;background:var(--accent);border-radius:3px;transition:width .3s ease;width:0%}
+.progress-wrap.active .progress-bar-fill {animation:progress-pulse 2s ease-in-out forwards}
+@keyframes progress-pulse {0%{width:5%}30%{width:35%}60%{width:65%}100%{width:90%}}
+.progress-text {font-size:13px;color:var(--text2);display:flex;justify-content:space-between;font-weight:600}
+
+.spinner {width:28px;height:28px;border:2.5px solid var(--dim);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin {to{transform:rotate(360deg)}}
+
+.empty-state {text-align:center;padding:40px 20px;color:var(--muted)}
+.empty-state svg {width:40px;height:40px;margin-bottom:12px;opacity:.3}
+.empty-state p {font-size:13px;font-weight:500}
+
+/* Network Diagnostic Cards */
+.diag-card {background:transparent;border:1px solid rgba(255,255,255,0.05);border-radius:12px;padding:16px 20px;margin-bottom:10px;animation:slideUp .35s ease;display:none}
+.diag-card.visible {display:block}
+.diag-card .diag-header {display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.diag-status {width:8px;height:8px;border-radius:50%}
+.diag-status.ok {background:var(--green);box-shadow:0 0 6px rgba(0,232,160,.4)}
+.diag-status.warn {background:var(--warning);box-shadow:0 0 6px rgba(255,179,71,.4)}
+.diag-status.bad {background:var(--red);box-shadow:0 0 6px rgba(255,83,103,.4)}
+.diag-status.pending {background:var(--muted);animation:livePulse 1s ease-in-out infinite}
+.diag-title {font-size:16px;font-weight:700;color:var(--text)}
+.diag-value {font-size:14px;color:var(--text2);margin-left:auto}
+.diag-detail {font-size:14px;color:var(--text2);line-height:1.7}
+.diag-bar {height:6px;border-radius:3px;margin:8px 0;overflow:hidden;background:var(--dim)}
+.diag-bar-fill {height:100%;border-radius:3px;transition:width .6s ease}
+.diag-bar-fill.good {background:var(--green)}
+.diag-bar-fill.ok {background:var(--warning)}
+.diag-bar-fill.bad {background:linear-gradient(90deg,var(--warning),var(--red))}
+
+.issue-card {padding:12px 16px;border-radius:10px;margin-bottom:6px;animation:slideUp .3s ease}
+.issue-card.critical {background:rgba(255,83,103,.08);border-left:3px solid var(--red)}
+.issue-card.warning {background:rgba(255,179,71,.06);border-left:3px solid var(--warning)}
+.issue-card.info {background:rgba(148,154,170,.06);border-left:3px solid var(--muted)}
+.issue-card.success {background:rgba(0,232,160,.06);border-left:3px solid var(--green)}
+.issue-title {font-size:15px;font-weight:700;color:var(--text)}
+.issue-detail {font-size:14px;color:var(--text2);margin-top:3px}
+
+.toast {position:fixed;top:28px;right:28px;padding:12px 24px;border-radius:12px;font-size:14px;font-weight:600;z-index:1000;animation:slideIn .35s cubic-bezier(.4,0,.2,1),slideOut .3s ease 2.5s forwards;pointer-events:none;box-shadow:0 8px 32px rgba(0,0,0,.4);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+.toast.success {background:rgba(0,232,160,.12);color:var(--green);border:1px solid rgba(0,232,160,.2)}
+.toast.error {background:rgba(255,83,103,.12);color:var(--red);border:1px solid rgba(255,83,103,.2)}
+@keyframes slideIn {from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes slideOut {from{transform:translateX(0);opacity:1}to{transform:translateX(120%);opacity:0}}
+
+.main::-webkit-scrollbar {width:6px}
+.main::-webkit-scrollbar-track {background:transparent}
+.main::-webkit-scrollbar-thumb {background:rgba(255,255,255,.08);border-radius:3px}
+.main::-webkit-scrollbar-thumb:hover {background:rgba(255,255,255,.15)}
+
+@media (prefers-color-scheme: light){
+  :root {
+    --bg:#f5f3f0;--surface:#eeebe6;--surface2:#e8e4df;
+    --card:rgba(255,255,255,.65);--card-hover:rgba(255,255,255,.75);
+    --card-border:rgba(0,0,0,.07);--card-border-hover:rgba(0,0,0,.12);
+    --text:#1a1a1a;--text2:#444;--muted:#6e6e6e;
+    --dim:rgba(0,0,0,.07);--dim2:rgba(0,0,0,.03);
+    --accent:#e05520;
+    --green:#008060;--red:#d03040;
+  }
+  body::before,body::after{display:none}
+  .sidebar{background:linear-gradient(180deg,rgba(238,235,230,.9),rgba(232,228,223,.95));border-right-color:rgba(0,0,0,.07)}
+  .card{background:transparent;border-color:rgba(0,0,0,0.08);box-shadow:none}
+  .page-title,.card-title{color:#1a1a1a}.gauge-pct,.stat-value{color:#1a1a1a}
+  .stat-value.green{color:var(--green)}.stat-value.accent{color:var(--accent)}
+  .junk-name{color:#1a1a1a}.junk-size{color:#666}
+  .btn-outline{color:#1a1a1a;border-color:rgba(0,0,0,.12)}
+  .btn-outline:hover{background:rgba(0,0,0,.03);border-color:rgba(0,0,0,.2)}
+  .empty-state p{color:var(--muted)}
+  .sidebar-footer{color:rgba(0,0,0,.2)}.nav-item{color:#444}
+  .disk-bar-bg{box-shadow:inset 0 1px 2px rgba(0,0,0,.06)}
+  .junk-item:hover{background:transparent}
+  .toast{box-shadow:0 4px 16px rgba(0,0,0,.1)}
+  .toast.success{background:rgba(0,128,96,.08)}
+  .toast.error{background:rgba(208,48,64,.08)}
+  .main::-webkit-scrollbar-thumb{background:rgba(0,0,0,.08)}
+  .main::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,.15)}
+}
+</style>
+</head>
+<body>
+<div id="toast-container"></div>
+<div class="sidebar">
+  <div class="sidebar-logo">Dclean</div>
+  <div class="sidebar-nav">
+    <div class="nav-item active" data-page="system"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>系统状态<span class="live-dot"></span></div>
+    <div class="nav-item" data-page="junk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14"/></svg>垃圾扫描</div>
+    <div class="nav-item" data-page="largefiles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>大文件/旧文件</div>
+    <div class="nav-item" data-page="apps"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M12 6v.01M8 14v.01M16 14v.01M10 18v.01M14 18v.01"/></svg>App 空间</div>
+    <div class="nav-item" data-page="uninstall"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>卸载软件</div>
+    <div class="nav-item" data-page="netdiag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>网络诊断</div>
+    <div class="nav-item" data-page="network"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>关于/更新</div>
+  </div>
+  <div class="sidebar-footer">v3.0 . macOS</div>
+</div>
+
+<div class="main">
+
+<!-- SYSTEM -->
+<div class="page active" id="page-system">
+  <div class="page-title">系统状态</div>
+  <div class="page-sub">实时监控内存、CPU 与磁盘使用情况</div>
+  <div class="card">
+    <div class="gauges-row">
+      <div class="gauge-wrap">
+        <div class="gauge-canvas-wrap"><canvas id="memGauge"></canvas><div class="gauge-center"><div class="gauge-pct" id="mem-pct">--</div><div class="gauge-label">/ <span id="mem-total-g">--</span></div></div></div>
+        <div class="gauge-stats">
+          <div class="stat-row"><span class="stat-label">已用</span><span class="stat-value accent" id="mem-used">--</span></div>
+          <div class="stat-row"><span class="stat-label">可用</span><span class="stat-value green" id="mem-free">--</span></div>
+          <div class="stat-row"><span class="stat-label">缓存</span><span class="stat-value" id="mem-cached">--</span></div>
+          <div class="stat-row" style="border-top:1px solid var(--dim);padding-top:8px"><span class="stat-label" style="color:var(--text);font-weight:600">总计</span><span class="stat-value" id="mem-total">--</span></div>
+        </div>
+      </div>
+      <div class="gauge-wrap">
+        <div class="gauge-canvas-wrap"><canvas id="cpuGauge"></canvas><div class="gauge-center"><div class="gauge-pct" id="cpu-pct">--</div><div class="gauge-label">CPU 使用率</div></div></div>
+      </div>
+    </div>
+    <div class="btn-row"><button class="btn btn-primary btn-pulse" id="btn-clean" onclick="cleanMem()">清理内存</button><span style="font-size:10px;color:var(--muted);align-self:center">无需密码</span></div>
+    <div class="status-msg" id="mem-status"></div>
+  </div>
+  <div class="card">
+    <div class="card-title" style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--text)">内存占用大户</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-size:10px;color:var(--muted)" id="proc-summary">点击刷新查看占用最多的进程</span><div style="display:flex;gap:6px"><button class="btn btn-secondary" id="btn-procs" onclick="loadProcs()">刷新</button><button class="btn btn-outline" id="btn-kill-procs" disabled onclick="killSelectedProcs()">释放选中</button></div></div>
+    <div id="proc-list"><div class="empty-state"><p>点击刷新查看</p></div></div>
+    <div class="status-msg" id="proc-status"></div>
+  </div>
+  <div class="card">
+    <div class="card-title" style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--text)">磁盘空间</div>
+    <div class="disk-bar-wrap" id="disk-bars"><div class="empty-state"><p>加载中...</p></div></div>
+  </div>
+</div>
+
+<!-- JUNK -->
+<div class="page" id="page-junk">
+  <div class="page-title">垃圾扫描</div>
+  <div class="page-sub">按软件分类扫描缓存与临时文件</div>
+  <div class="card">
+    <div class="junk-header"><span style="font-size:11px;color:var(--muted)" id="junk-summary">点击扫描分析系统</span><div style="display:flex;gap:6px"><button class="btn btn-secondary" id="btn-scan" onclick="scanJ()">扫描</button><button class="btn btn-outline" id="btn-clean-j" disabled onclick="cleanJ()">清理选中</button></div></div>
+    <div id="junk-content"><div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg><p>点击扫描发现垃圾文件</p></div></div>
+    <div class="progress-wrap" id="pwrap"><div class="progress-bar-bg"><div class="progress-bar-fill" id="pfill"></div></div><div class="progress-text"><span id="plabel">删除中...</span><span id="pcount">0/0</span></div></div>
+    <div class="status-msg" id="junk-status"></div>
+  </div>
+</div>
+
+<!-- LARGE FILES -->
+<div class="page" id="page-largefiles">
+  <div class="page-title">大文件与旧文件</div>
+  <div class="page-sub">扫描 Downloads、Desktop、Documents 中的大文件和长期未访问的文件</div>
+  <div class="card">
+    <div class="junk-header"><span style="font-size:11px;color:var(--muted)" id="lf-summary">点击扫描查找大文件</span><div style="display:flex;gap:6px;align-items:center"><select id="lf-threshold" style="background:var(--card);color:var(--text);border:1px solid var(--dim);border-radius:6px;padding:5px 8px;font-size:11px"><option value="1073741824">&gt; 1 GB</option><option value="5368709120">&gt; 5 GB</option><option value="10737418240">&gt; 10 GB</option></select><button class="btn btn-secondary" id="btn-lfscan" onclick="scanLF()">扫描</button><button class="btn btn-outline" id="btn-lfclean" disabled onclick="cleanLF()">清理选中</button></div></div>
+    <div id="lf-content"><div class="empty-state"><p>点击扫描发现大文件和过期文件</p></div></div>
+    <div class="progress-wrap" id="lfwrap"><div class="progress-bar-bg"><div class="progress-bar-fill" id="lffill"></div></div><div class="progress-text"><span id="lflabel">删除中...</span><span id="lfcount">0/0</span></div></div>
+    <div class="status-msg" id="lf-status"></div>
+  </div>
+</div>
+
+<!-- APP SPACE -->
+<div class="page" id="page-apps">
+  <div class="page-title">App 空间占用</div>
+  <div class="page-sub">扫描 /Applications 中每个 App 的磁盘占用</div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><span style="font-size:11px;color:var(--muted)" id="app-summary">点击扫描查看各 App 占用</span><button class="btn btn-secondary" id="btn-apps" onclick="scanApps()">扫描 App</button></div>
+    <div id="app-content"><div class="empty-state"><p>点击扫描查看各 App 磁盘占用</p></div></div>
+  </div>
+</div>
+
+<!-- UNINSTALL -->
+<div class="page" id="page-uninstall">
+  <div class="page-title">卸载软件</div>
+  <div class="page-sub">彻底删除 App 及其关联文件（偏好设置、缓存、容器等）</div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><span style="font-size:11px;color:var(--muted)" id="uninst-summary">点击扫描查看可卸载的 App</span><button class="btn btn-secondary" id="btn-uiscan" onclick="scanUninst()">扫描</button></div>
+    <div id="uninst-apps"></div>
+    <div style="font-size:10px;color:var(--muted);margin-top:5px" id="uninst-click-hint"></div>
+    <div id="uninst-related" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--dim)"><div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px" id="uninst-rel-title">关联文件</div><div id="uninst-rel-list"></div></div>
+    <div class="btn-row"><button class="btn btn-primary" id="btn-uninst" onclick="doUninstall()" disabled>卸载选中</button><span style="font-size:10px;color:var(--muted);align-self:center" id="uninst-hint">请先点击上方 App 以查看关联文件</span><button class="btn btn-outline" id="btn-uninst-cancel" onclick="cancelUninst()" style="display:none">取消选择</button></div>
+    <div class="progress-wrap" id="upwrap"><div class="progress-bar-bg"><div class="progress-bar-fill" id="upfill"></div></div><div class="progress-text"><span id="uplabel">卸载中...</span><span id="upcount">0/0</span></div></div>
+    <div class="status-msg" id="uninst-status"></div>
+  </div>
+</div>
+
+<!-- NETWORK DIAGNOSTICS -->
+<div class="page" id="page-netdiag">
+  <div class="page-title">网络诊断</div>
+  <div class="page-sub">全面检测 WiFi 信号、DNS 解析、外网连通性与连接质量</div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <span style="font-size:11px;color:var(--muted)" id="diag-summary">点击开始诊断，检测网络可能存在的问题</span>
+      <button class="btn btn-primary" id="btn-diag" onclick="runDiag()">开始诊断</button>
+    </div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:14px">预计耗时约 12 秒</div>
+    <!-- WiFi -->
+    <div class="diag-card" id="diag-wifi"><div class="diag-header"><div class="diag-status pending" id="wifi-status-dot"></div><div class="diag-title">网络连接</div><div class="diag-value" id="wifi-summary-val"></div></div><div class="diag-detail" id="wifi-detail"></div></div>
+    <!-- Ping -->
+    <div class="diag-card" id="diag-ping"><div class="diag-header"><div class="diag-status pending" id="ping-status-dot"></div><div class="diag-title">延迟与丢包</div><div class="diag-value" id="ping-summary-val"></div></div><div class="diag-detail" id="ping-detail"></div></div>
+    <!-- DNS -->
+    <div class="diag-card" id="diag-dns"><div class="diag-header"><div class="diag-status pending" id="dns-status-dot"></div><div class="diag-title">DNS 解析</div><div class="diag-value" id="dns-summary-val"></div></div><div class="diag-detail" id="dns-detail"></div></div>
+    <!-- Connection Quality -->
+    <div class="diag-card" id="diag-conn"><div class="diag-header"><div class="diag-status pending" id="conn-status-dot"></div><div class="diag-title">TCP 连接质量</div><div class="diag-value" id="conn-summary-val"></div></div><div class="diag-detail" id="conn-detail"></div></div>
+    <!-- Diagnosis Summary -->
+    <div id="diag-results" style="margin-top:16px;display:none"></div>
+  </div>
+</div>
+
+<!-- UPDATE/ABOUT -->
+<div class="page" id="page-network">
+  <div class="page-title">关于 / 更新</div>
+  <div class="page-sub">查看版本信息与更新日志</div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <span style="font-size:13px;font-weight:700;color:var(--text)">当前版本</span>
+      <span style="font-size:16px;font-weight:700;color:var(--accent)">v3.0</span>
+    </div>
+    <div style="text-align:center;padding:20px 0" id="update-status">
+      <button class="btn btn-primary" id="btn-update" onclick="checkUpdate()">检查更新</button>
+    </div>
+    <div id="update-result"></div>
+  </div>
+  <div class="card">
+    <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px">更新日志</div>
+    <div style="font-size:11px;color:var(--muted);line-height:1.8">
+      <strong>v3.0</strong> — 2026.05<br>
+      · 全新网络诊断模块（WiFi/DNS/连通性）<br>
+      · 修复 Dock 图标重新打开无效的问题<br>
+      · 支持开机自动启动<br>
+      · 磁盘显示与 Finder 一致<br>
+      · UI 全面升级：更强的玻璃拟态<br>
+      · 代码模块化重构<br><br>
+      <strong>v2.4</strong> — 2026.05<br>
+      · 全新玻璃拟态 UI 设计<br>
+      · 新增 App 卸载（含关联文件清理）<br>
+      · 新增大文件/旧文件扫描<br>
+      · 新增内存占用大户检测<br>
+      · 垃圾扫描按软件分类<br><br>
+      <strong>v2.0</strong> — 2026.05<br>
+      · 首个正式版本
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+// ========== NAVIGATION ==========
+document.querySelectorAll('.nav-item').forEach(el => {
+  el.onclick = () => {
+    document.querySelectorAll('.nav-item').forEach(e => e.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-' + el.dataset.page).classList.add('active');
+  }
+});
+
+// ========== TOAST ==========
+function toast(m, t) {
+  const d = document.getElementById('toast-container');
+  const div = document.createElement('div');
+  div.className = 'toast ' + t; div.textContent = m;
+  d.appendChild(div); setTimeout(() => div.remove(), 3000);
+}
+
+// ========== BRIDGE ==========
+let ri = 0;
+function cn(a, d) {
+  return new Promise(r => {
+    const i = '' + (++ri);
+    window['callback_' + i] = r;
+    try { webkit.messageHandlers.bridge.postMessage({action: a, id: i, data: d || {}}); }
+    catch(e) { r(null); }
+  });
+}
+
+// ========== FORMATTING ==========
+function fb(b) {
+  if (!b || b === 0) return '0 B';
+  const u = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let i = 0, v = b;
+  while (v >= 1024 && i < u.length - 1) { v /= 1024; i++; }
+  return v.toFixed(i === 0 ? 0 : 1) + ' ' + u[i];
+}
+
+// ========== GAUGES ==========
+const mC = document.getElementById('memGauge'), mctx = mC.getContext('2d');
+const cC = document.getElementById('cpuGauge'), cctx = cC.getContext('2d');
+let memAnim = { value: 0 }, cpuAnim = { value: 0 };
+
+function drawGauge(ctx, w, h, pct, colors) {
+  const dpr = window.devicePixelRatio || 1;
+  ctx.canvas.width = w * dpr; ctx.canvas.height = h * dpr;
+  ctx.canvas.style.width = w + 'px'; ctx.canvas.style.height = h + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  const cx = 70, cy = 68, r = 54, lw = 11;
+  ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI * 0.72, Math.PI * 2.28);
+  ctx.strokeStyle = 'rgba(255,255,255,.07)'; ctx.lineWidth = lw; ctx.lineCap = 'round'; ctx.stroke();
+  const g = ctx.createLinearGradient(0, 0, w, 0);
+  colors.forEach((c, i) => g.addColorStop(i / (colors.length - 1), c));
+  ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI * 0.72, Math.PI * 0.72 + Math.PI * 1.56 * Math.min(pct / 100, 1));
+  ctx.strokeStyle = g; ctx.stroke();
+}
+
+function smoothGauge(anim, target, ctx, w, h, colors) {
+  const step = (target - anim.value) * 0.18;
+  anim.value += step;
+  if (Math.abs(target - anim.value) < 0.3) anim.value = target;
+  drawGauge(ctx, w, h, anim.value, colors);
+  if (Math.abs(target - anim.value) > 0.1) requestAnimationFrame(() => smoothGauge(anim, target, ctx, w, h, colors));
+}
+
+// ========== SYSTEM ==========
+async function refreshSys() {
+  const s = await cn('sysInfo'); if (!s) return;
+  document.getElementById('mem-pct').textContent = s.memPct + '%';
+  document.getElementById('cpu-pct').textContent = s.cpuPct + '%';
+  document.getElementById('mem-used').textContent = fb(s.memUsed);
+  document.getElementById('mem-free').textContent = fb(s.memFree);
+  document.getElementById('mem-cached').textContent = fb(s.memCached);
+  document.getElementById('mem-total').textContent = fb(s.memTotal);
+  document.getElementById('mem-total-g').textContent = fb(s.memTotal);
+  smoothGauge(memAnim, s.memPct, mctx, 140, 140, ['#00c896', '#ff7b4a', '#ff5367']);
+  smoothGauge(cpuAnim, s.cpuPct, cctx, 140, 140, ['#949aaa', '#ff7b4a', '#ff5367']);
+  if (s.disks) {
+    let h = '';
+    for (const [name, d] of Object.entries(s.disks)) {
+      const pct = d.total > 0 ? Math.round(d.used / d.total * 100) : 0;
+      h += '<div class="disk-row"><span class="disk-name">' + name + '</span><div class="disk-bar-bg"><div class="disk-bar-fill" style="width:' + pct + '%;background:' + (pct > 90 ? 'var(--red)' : pct > 70 ? 'var(--accent)' : 'var(--green)') + '"></div></div><span class="disk-info">' + fb(d.used) + ' / ' + fb(d.total) + ' 可用 ' + fb(d.avail) + '</span></div>';
+    }
+    document.getElementById('disk-bars').innerHTML = h;
+  }
+}
+
+async function cleanMem() {
+  const b = document.getElementById('btn-clean'); b.disabled = true; b.textContent = '清理中...';
+  document.getElementById('mem-status').textContent = ''; document.getElementById('mem-status').className = 'status-msg';
+  const raw = await cn('purge');
+  try {
+    const r = JSON.parse(raw || '{}');
+    b.disabled = false; b.textContent = '清理内存';
+    if (r.status === 'success') {
+      const freed = r.freed || 0;
+      const delta = r.beforePct - r.afterPct;
+      if (freed > 0) {
+        document.getElementById('mem-status').textContent = '释放了 ' + fb(freed) + ' (内存使用 ' + r.beforePct + '% → ' + r.afterPct + '%)';
+        document.getElementById('mem-status').className = 'status-msg success';
+        toast('释放 ' + fb(freed), 'success');
+      } else {
+        document.getElementById('mem-status').textContent = '内存状态良好，当前使用率 ' + r.afterPct + '%，无需清理';
+        document.getElementById('mem-status').className = 'status-msg success';
+      }
+      // 直接用清理后的值更新仪表盘
+      document.getElementById('mem-pct').textContent = r.afterPct + '%';
+      document.getElementById('mem-used').textContent = fb(r.afterUsed);
+      smoothGauge(memAnim, r.afterPct, mctx, 140, 140, ['#00c896', '#ff7b4a', '#ff5367']);
+    } else {
+      document.getElementById('mem-status').textContent = '清理失败，请重试';
+      document.getElementById('mem-status').className = 'status-msg error';
+    }
+  } catch(e) {
+    b.disabled = false; b.textContent = '清理内存';
+  }
+}
+
+// ========== JUNK ==========
+let junkGroups = [], allFlat = [];
+function findFlatIdx(gIdx, iIdx) { let c = 0; for (let g = 0; g < gIdx; g++) c += junkGroups[g].items.length; return c + iIdx; }
+async function scanJ() {
+  document.getElementById('btn-scan').disabled = true; document.getElementById('btn-scan').textContent = '扫描中...';
+  document.getElementById('junk-summary').textContent = '正在分析系统...';
+  document.getElementById('junk-content').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;padding:40px"><div class="spinner"></div></div>';
+  const raw = await cn('scanJunk');
+  try { junkGroups = JSON.parse(raw); allFlat = junkGroups.flatMap(g => g.items.map(i => ({...i}))); renderJunk(); }
+  catch(e) { junkGroups = []; allFlat = []; renderJunk(); }
+  document.getElementById('btn-scan').disabled = false; document.getElementById('btn-scan').textContent = '扫描';
+  const total = allFlat.reduce((s, i) => s + i.size, 0);
+  document.getElementById('junk-summary').textContent = allFlat.length ? '发现 ' + allFlat.length + ' 项共 ' + fb(total) : '未发现垃圾文件';
+}
+function renderJunk() {
+  const el = document.getElementById('junk-content');
+  if (!junkGroups.length) { el.innerHTML = '<div class="empty-state"><p>没有垃圾文件 — 系统很干净！</p></div>'; document.getElementById('btn-clean-j').disabled = true; return; }
+  let h = ''; junkGroups.forEach((g, gIdx) => {
+    const gt = g.items.reduce((s, i) => s + i.size, 0);
+    h += '<div class="junk-group"><div class="junk-group-header" onclick="toggleGroup(this)"><span class="arrow">▼</span>' + g.category + ' <span style="color:var(--muted);font-weight:400;font-size:10px">(' + fb(gt) + ')</span></div><div class="junk-group-body">';
+    g.items.forEach((item, iIdx) => {
+      const fi = findFlatIdx(gIdx, iIdx); const sel = allFlat[fi];
+      h += '<div class="junk-item' + (sel && sel.selected !== false ? ' selected' : '') + '" onclick="toggleJ(' + fi + ')"><div class="junk-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div><div class="junk-info"><div class="junk-name">' + item.name + '</div><div class="junk-path">' + item.path + '</div></div><div class="junk-size">' + fb(item.size) + '</div></div>';
+    });
+    h += '</div></div>';
+  });
+  el.innerHTML = h; document.getElementById('btn-clean-j').disabled = !allFlat.some(i => i.selected !== false);
+}
+function toggleGroup(hdr) { hdr.classList.toggle('collapsed'); hdr.nextElementSibling.classList.toggle('hidden'); }
+function toggleJ(fi) {
+  const item = allFlat[fi]; if (!item) return;
+  if (item.selected === undefined) item.selected = false; else item.selected = !item.selected;
+  let c = 0;
+  for (let g = 0; g < junkGroups.length; g++) { for (let i = 0; i < junkGroups[g].items.length; i++) { if (c === fi) { junkGroups[g].items[i].selected = item.selected; g = junkGroups.length; break; } c++; } }
+  renderJunk();
+}
+async function cleanJ() {
+  const sel = allFlat.filter(i => i.selected !== false); if (!sel.length) return;
+  const total = sel.length; const paths = sel.map(i => i.path);
+  document.getElementById('btn-clean-j').disabled = true; document.getElementById('btn-clean-j').textContent = '清理中...'; document.getElementById('btn-scan').disabled = true;
+  const pw = document.getElementById('pwrap'); pw.classList.add('active'); document.getElementById('pfill').style.width = '0%'; document.getElementById('pcount').textContent = '0/' + total; document.getElementById('plabel').textContent = '正在删除 ' + total + ' 项...';
+  const result = await cn('deletePaths', {paths: paths}); document.getElementById('pfill').style.width = '100%'; document.getElementById('pcount').textContent = total + '/' + total; document.getElementById('plabel').textContent = '完成';
+  await new Promise(r => setTimeout(r, 500)); document.getElementById('btn-clean-j').disabled = false; document.getElementById('btn-clean-j').textContent = '清理选中'; document.getElementById('btn-scan').disabled = false; pw.classList.remove('active');
+  const d = result ? result.deleted : 0; const f = result ? result.freed : 0;
+  allFlat = allFlat.filter((_, i) => !paths.includes(allFlat[i].path));
+  junkGroups = junkGroups.map(g => ({...g, items: g.items.filter(i => !paths.includes(i.path))})).filter(g => g.items.length > 0);
+  renderJunk();
+  document.getElementById('junk-status').textContent = '已清理: ' + d + '/' + total + ' 项 (' + fb(f) + ')'; document.getElementById('junk-status').className = 'status-msg success'; toast('已释放 ' + fb(f), 'success');
+  setTimeout(() => { document.getElementById('junk-status').textContent = ''; document.getElementById('junk-status').className = 'status-msg'; }, 4000);
+}
+
+// ========== LARGE FILES ==========
+let lfItems = [];
+async function scanLF() {
+  document.getElementById('btn-lfscan').disabled = true; document.getElementById('btn-lfscan').textContent = '扫描中...';
+  document.getElementById('lf-summary').textContent = '正在扫描大文件...';
+  document.getElementById('lf-content').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;padding:40px"><div class="spinner"></div></div>';
+  const threshold = parseInt(document.getElementById('lf-threshold').value);
+  const raw = await cn('scanLargeFiles', {threshold: threshold});
+  try { lfItems = JSON.parse(raw); } catch(e) { lfItems = []; }
+  renderLF();
+  document.getElementById('btn-lfscan').disabled = false; document.getElementById('btn-lfscan').textContent = '扫描';
+  const total = lfItems.reduce((s, i) => s + (i.size || 0), 0);
+  document.getElementById('lf-summary').textContent = lfItems.length ? '发现 ' + lfItems.length + ' 个文件共 ' + fb(total) : '未发现大文件';
+}
+function renderLF() {
+  const el = document.getElementById('lf-content');
+  if (!lfItems.length) { el.innerHTML = '<div class="empty-state"><p>未发现符合条件的文件</p></div>'; document.getElementById('btn-lfclean').disabled = true; return; }
+  let h = '<div class="junk-list">';
+  lfItems.forEach((item, i) => { h += '<div class="junk-item' + (item.selected !== false ? ' selected' : '') + '" onclick="toggleLF(' + i + ')"><div class="junk-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div><div class="junk-info"><div class="junk-name">' + item.name + '</div><div class="junk-path">' + item.path + ' · ' + item.age + ' 天未访问</div></div><div class="junk-size">' + fb(item.size) + '</div></div>'; });
+  h += '</div>'; el.innerHTML = h;
+  document.getElementById('btn-lfclean').disabled = !lfItems.some(i => i.selected !== false);
+}
+function toggleLF(i) { lfItems[i].selected = !lfItems[i].selected; renderLF(); }
+async function cleanLF() {
+  const sel = lfItems.filter(i => i.selected !== false); if (!sel.length) return;
+  const total = sel.length; const paths = sel.map(i => i.path);
+  document.getElementById('btn-lfclean').disabled = true; document.getElementById('btn-lfclean').textContent = '清理中...'; document.getElementById('btn-lfscan').disabled = true;
+  const pw = document.getElementById('lfwrap'); pw.classList.add('active'); document.getElementById('lffill').style.width = '0%'; document.getElementById('lfcount').textContent = '0/' + total; document.getElementById('lflabel').textContent = '正在删除 ' + total + ' 个文件...';
+  const result = await cn('deletePaths', {paths: paths}); document.getElementById('lffill').style.width = '100%'; document.getElementById('lfcount').textContent = total + '/' + total; document.getElementById('lflabel').textContent = '完成';
+  await new Promise(r => setTimeout(r, 500)); document.getElementById('btn-lfclean').disabled = false; document.getElementById('btn-lfclean').textContent = '清理选中'; document.getElementById('btn-lfscan').disabled = false; pw.classList.remove('active');
+  const d = result ? result.deleted : 0; const f = result ? result.freed : 0;
+  lfItems = lfItems.filter(i => !paths.includes(i.path)); renderLF();
+  document.getElementById('lf-status').textContent = '已清理: ' + d + '/' + total + ' (' + fb(f) + ')'; document.getElementById('lf-status').className = 'status-msg success'; toast('已释放 ' + fb(f), 'success');
+  setTimeout(() => { document.getElementById('lf-status').textContent = ''; document.getElementById('lf-status').className = 'status-msg'; }, 4000);
+}
+
+// ========== APP SPACE ==========
+async function scanApps() {
+  document.getElementById('btn-apps').disabled = true; document.getElementById('btn-apps').textContent = '扫描中...'; document.getElementById('app-summary').textContent = '正在扫描...';
+  document.getElementById('app-content').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;padding:40px"><div class="spinner"></div></div>';
+  const raw = await cn('scanApps'); let apps = []; try { apps = JSON.parse(raw); } catch(e) {}
+  const total = apps.reduce((s, a) => s + (a.size || 0), 0); document.getElementById('app-summary').textContent = apps.length + ' 个 App，共 ' + fb(total);
+  if (!apps.length) { document.getElementById('app-content').innerHTML = '<div class="empty-state"><p>未找到 App</p></div>'; }
+  else { let h = '<div class="junk-list">'; apps.forEach(a => { h += '<div class="junk-item" style="cursor:default"><div class="junk-info"><div class="junk-name">' + a.name + '</div></div><div class="junk-size">' + fb(a.size) + '</div></div>'; }); h += '</div>'; document.getElementById('app-content').innerHTML = h; }
+  document.getElementById('btn-apps').disabled = false; document.getElementById('btn-apps').textContent = '扫描 App';
+}
+
+// ========== UNINSTALL ==========
+let uninstApps = [], selectedUninst = null, relatedFiles = [];
+async function scanUninst() {
+  document.getElementById('btn-uiscan').disabled = true; document.getElementById('btn-uiscan').textContent = '扫描中...'; document.getElementById('uninst-summary').textContent = '正在扫描...';
+  document.getElementById('uninst-apps').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;padding:40px"><div class="spinner"></div></div>';
+  document.getElementById('uninst-related').style.display = 'none'; selectedUninst = null; relatedFiles = [];
+  document.getElementById('btn-uninst').disabled = true; document.getElementById('uninst-click-hint').textContent = '';
+  document.getElementById('uninst-hint').textContent = '请先点击上方 App 以查看关联文件';
+  document.getElementById('btn-uninst-cancel').style.display = 'none'; document.getElementById('uninst-hint').style.display = '';
+  const raw = await cn('scanUninstall'); try { uninstApps = JSON.parse(raw); renderUninstApps(); } catch(e) { uninstApps = []; renderUninstApps(); }
+  document.getElementById('btn-uiscan').disabled = false; document.getElementById('btn-uiscan').textContent = '扫描';
+  const total = uninstApps.reduce((s, a) => s + (a.size || 0), 0);
+  document.getElementById('uninst-summary').textContent = uninstApps.length + ' 个 App，共 ' + fb(total) + '  —  点击 App 查看关联文件';
+}
+function renderUninstApps() {
+  const el = document.getElementById('uninst-apps'); if (!uninstApps.length) { el.innerHTML = '<div class="empty-state"><p>未找到 App</p></div>'; return; }
+  let h = '<div class="junk-list">'; uninstApps.forEach((a, i) => { h += '<div class="junk-item' + (selectedUninst === i ? ' selected' : '') + '" onclick="selectUninst(' + i + ')" style="border-left:3px solid ' + (selectedUninst === i ? 'var(--accent)' : 'transparent') + '"><div class="junk-info"><div class="junk-name">' + a.name + '</div><div class="junk-path">' + a.path + '</div></div><div class="junk-size">' + fb(a.size) + '</div></div>'; }); h += '</div>'; el.innerHTML = h;
+}
+async function selectUninst(i) {
+  if (selectedUninst === i) { cancelUninst(); return; }
+  selectedUninst = i; renderUninstApps();
+  const app = uninstApps[i]; if (!app) return;
+  document.getElementById('uninst-related').style.display = 'block'; document.getElementById('btn-uninst').disabled = false;
+  document.getElementById('uninst-click-hint').textContent = '已选择: ' + app.name;
+  document.getElementById('uninst-hint').style.display = 'none'; document.getElementById('btn-uninst-cancel').style.display = '';
+  document.getElementById('uninst-rel-title').textContent = app.name + ' 的关联文件';
+  document.getElementById('uninst-rel-list').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;padding:30px"><div class="spinner"></div></div>';
+  const raw = await cn('findRelated', {name: app.name, bundleID: app.bundleID}); try { relatedFiles = JSON.parse(raw); } catch(e) { relatedFiles = []; }
+  const total = relatedFiles.reduce((s, f) => s + (f.size || 0), 0);
+  document.getElementById('uninst-hint').textContent = '共 ' + fb(total + (app.size || 0)) + ' — 含 App 本体 +' + relatedFiles.length + ' 个关联文件'; document.getElementById('uninst-hint').style.display = '';
+  let h = '<div class="junk-list">';
+  h += '<div class="junk-item selected" style="pointer-events:none"><div class="junk-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div><div class="junk-info"><div class="junk-name">' + app.name + ' (App 本体)</div></div><div class="junk-size">' + fb(app.size) + '</div></div>';
+  relatedFiles.forEach(f => { h += '<div class="junk-item selected" style="pointer-events:none"><div class="junk-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div><div class="junk-info"><div class="junk-name">' + f.name + '</div><div class="junk-path">' + f.label + ' — ' + f.path + '</div></div><div class="junk-size">' + fb(f.size) + '</div></div>'; });
+  h += '</div>'; document.getElementById('uninst-rel-list').innerHTML = h;
+}
+function cancelUninst() {
+  selectedUninst = null; renderUninstApps(); document.getElementById('uninst-related').style.display = 'none';
+  document.getElementById('btn-uninst').disabled = true; document.getElementById('btn-uninst-cancel').style.display = 'none';
+  document.getElementById('uninst-click-hint').textContent = ''; document.getElementById('uninst-hint').style.display = '';
+  document.getElementById('uninst-hint').textContent = '请先点击上方 App 以查看关联文件'; relatedFiles = [];
+}
+async function doUninstall() {
+  if (selectedUninst === null) return; const app = uninstApps[selectedUninst]; if (!app) return;
+  const paths = [app.path, ...relatedFiles.map(f => f.path)]; const total = paths.length;
+  document.getElementById('btn-uninst').disabled = true; document.getElementById('btn-uninst').textContent = '卸载中...'; document.getElementById('btn-uiscan').disabled = true;
+  const pw = document.getElementById('upwrap'); pw.classList.add('active'); document.getElementById('upfill').style.width = '0%'; document.getElementById('upcount').textContent = '0/' + total; document.getElementById('uplabel').textContent = '正在卸载 ' + app.name + '...';
+  const result = await cn('uninstallApps', {paths: paths}); document.getElementById('upfill').style.width = '100%'; document.getElementById('upcount').textContent = total + '/' + total; document.getElementById('uplabel').textContent = '完成';
+  await new Promise(r => setTimeout(r, 500)); document.getElementById('btn-uninst').disabled = false; document.getElementById('btn-uninst').textContent = '卸载选中'; document.getElementById('btn-uiscan').disabled = false; pw.classList.remove('active');
+  const f = result ? result.freed : 0;
+  document.getElementById('uninst-status').textContent = '已卸载: ' + app.name + ' (' + fb(f) + ')'; document.getElementById('uninst-status').className = 'status-msg success'; toast('已卸载 ' + app.name, 'success');
+  uninstApps.splice(selectedUninst, 1); selectedUninst = null; relatedFiles = []; document.getElementById('uninst-related').style.display = 'none';
+  document.getElementById('btn-uninst').disabled = true; document.getElementById('btn-uninst-cancel').style.display = 'none';
+  document.getElementById('uninst-click-hint').textContent = ''; document.getElementById('uninst-hint').style.display = '';
+  document.getElementById('uninst-hint').textContent = '请先点击上方 App 以查看关联文件'; renderUninstApps();
+  setTimeout(() => { document.getElementById('uninst-status').textContent = ''; document.getElementById('uninst-status').className = 'status-msg'; }, 4000);
+}
+
+// ========== PROCS ==========
+let topProcs = [];
+async function loadProcs() {
+  document.getElementById('btn-procs').disabled = true; document.getElementById('btn-procs').textContent = '刷新中...';
+  document.getElementById('proc-list').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;padding:20px"><div class="spinner"></div></div>';
+  const raw = await cn('topProcs'); try { topProcs = JSON.parse(raw); } catch(e) { topProcs = []; } renderProcs();
+  document.getElementById('btn-procs').disabled = false; document.getElementById('btn-procs').textContent = '刷新';
+  document.getElementById('proc-summary').textContent = topProcs.length ? '共 ' + topProcs.length + ' 个进程，勾选后点释放即可退出' : '未发现高内存进程';
+}
+function renderProcs() {
+  const el = document.getElementById('proc-list'); if (!topProcs.length) { el.innerHTML = '<div class="empty-state"><p>未发现高内存进程</p></div>'; document.getElementById('btn-kill-procs').disabled = true; return; }
+  let h = '<div class="junk-list">'; topProcs.forEach((p, i) => { h += '<div class="junk-item' + (p.selected !== false ? ' selected' : '') + '" onclick="toggleProc(' + i + ')"><div class="junk-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div><div class="junk-info"><div class="junk-name">' + p.name + ' (PID: ' + p.pid + ')</div></div><div class="junk-size">' + fb(p.memory) + '</div></div>'; }); h += '</div>'; el.innerHTML = h;
+  document.getElementById('btn-kill-procs').disabled = !topProcs.some(p => p.selected !== false);
+}
+function toggleProc(i) { topProcs[i].selected = !topProcs[i].selected; renderProcs(); }
+async function killSelectedProcs() {
+  const sel = topProcs.filter(p => p.selected !== false); if (!sel.length) return;
+  document.getElementById('btn-kill-procs').disabled = true; document.getElementById('btn-kill-procs').textContent = '释放中...';
+  let killed = 0; for (const p of sel) { const ok = await cn('killProc', {pid: p.pid}); if (ok) { killed++; p._killed = true; } }
+  topProcs = topProcs.filter(p => !p._killed); renderProcs(); document.getElementById('btn-kill-procs').disabled = false; document.getElementById('btn-kill-procs').textContent = '释放选中';
+  document.getElementById('proc-status').textContent = '已释放 ' + killed + '/' + sel.length + ' 个进程'; document.getElementById('proc-status').className = 'status-msg success';
+  setTimeout(() => refreshSys(), 500); setTimeout(() => { document.getElementById('proc-status').textContent = ''; document.getElementById('proc-status').className = 'status-msg'; }, 3000);
+}
+
+// ========== UPDATE ==========
+async function checkUpdate() {
+  document.getElementById('btn-update').disabled = true; document.getElementById('btn-update').textContent = '检查中...';
+  document.getElementById('update-result').innerHTML = '';
+  try {
+    const resp = await fetch('https://api.github.com/repos/user/dclean/releases/latest');
+    if (resp.ok) {
+      const data = await resp.json();
+      document.getElementById('update-result').innerHTML = '<div style="margin-top:12px"><div class="net-card"><span style="font-size:16px;font-weight:700;color:var(--accent)">' + data.tag_name + '</span><div class="label">最新版本</div></div></div>';
+    } else {
+      document.getElementById('update-result').innerHTML = '<div style="text-align:center;padding:12px;color:var(--green);font-size:13px">当前已是最新版本 v3.0</div>';
+    }
+  } catch(e) {
+    document.getElementById('update-result').innerHTML = '<div style="text-align:center;padding:12px;color:var(--green);font-size:13px">当前已是最新版本 v3.0</div>';
+  }
+  document.getElementById('btn-update').disabled = false; document.getElementById('btn-update').textContent = '检查更新';
+}
+
+// ========== NETWORK DIAGNOSTICS ==========
+function showDiagCard(id) { document.getElementById(id).classList.add('visible'); }
+function setDiagStatus(id, status) {
+  const dot = document.getElementById(id + '-status-dot');
+  dot.className = 'diag-status ' + status;
+}
+function setDiagSummary(id, text) { document.getElementById(id + '-summary-val').textContent = text; }
+
+async function runDiag() {
+  const btn = document.getElementById('btn-diag');
+  btn.disabled = true; btn.textContent = '诊断中...';
+  document.getElementById('diag-summary').textContent = '正在检测网络...';
+  document.getElementById('diag-results').style.display = 'none';
+
+  // Phase 1: WiFi (fast)
+  const wifiRaw = await cn('wifiDiag');
+  const wifi = JSON.parse(wifiRaw || '{}');
+  renderWiFiDiag(wifi);
+
+  // Phase 2: Ping + DNS (parallel)
+  const [pingRaw, dnsRaw] = await Promise.all([cn('pingDiag'), cn('dnsDiag')]);
+  const ping = JSON.parse(pingRaw || '{}'); const dns = JSON.parse(dnsRaw || '{}');
+  renderPingDiag(ping); renderDNSDiag(dns);
+
+  // Phase 3: Connection quality (slower)
+  const connRaw = await cn('connDiag');
+  const conn = JSON.parse(connRaw || '{}');
+  renderConnDiag(conn);
+
+  // Summary
+  generateDiagSummary(wifi, ping, dns, conn);
+  btn.disabled = false; btn.textContent = '重新诊断';
+  document.getElementById('diag-summary').textContent = '诊断完成 — 点击重新检测';
+}
+
+function renderWiFiDiag(d) {
+  showDiagCard('diag-wifi');
+  // 有线连接
+  if (d && d.connectionType === 'wired') {
+    setDiagStatus('wifi', 'ok');
+    setDiagSummary('wifi', '有线网络');
+    let detail = '<div style="display:flex;gap:20px;flex-wrap:wrap">' +
+      '<div><span style="color:var(--muted)">接口:</span> ' + (d.portName || d.interfaceName) + '</div>';
+    if (d.speed > 0) detail += '<div><span style="color:var(--muted)">速率:</span> ' + d.speed + ' Mbps</div>';
+    if (d.ip) detail += '<div><span style="color:var(--muted)">IP:</span> ' + d.ip + '</div>';
+    detail += '</div>';
+    document.getElementById('wifi-detail').innerHTML = detail;
+    document.getElementById('diag-wifi').querySelector('.diag-status').className = 'diag-status ok';
+    return;
+  }
+  // 无连接
+  if (!d || (!d.wifiAvailable && d.connectionType !== 'wifi')) {
+    setDiagStatus('wifi', 'bad'); setDiagSummary('wifi', '未检测到网络');
+    document.getElementById('wifi-detail').innerHTML = '未检测到活跃的网络连接';
+    return;
+  }
+  // WiFi
+  const q = d.signalQuality;
+  const status = q === 'excellent' || q === 'good' ? 'ok' : q === 'fair' ? 'warn' : q === 'poor' ? 'bad' : 'ok';
+  setDiagStatus('wifi', status);
+  const rssiText = d.rssi !== 0 ? ' · ' + d.rssi + ' dBm' : '';
+  setDiagSummary('wifi', d.ssid + rssiText);
+  let detail = '<div style="display:flex;gap:20px;flex-wrap:wrap">' +
+    '<div><span style="color:var(--muted)">SSID:</span> ' + d.ssid + '</div>';
+  if (d.channel > 0) detail += '<div><span style="color:var(--muted)">信道:</span> ' + d.channel + (d.channelBand ? ' (' + d.channelBand + ')' : '') + '</div>';
+  if (d.phyMode !== '未知') detail += '<div><span style="color:var(--muted)">模式:</span> ' + d.phyMode + '</div>';
+  if (d.txRate > 0) detail += '<div><span style="color:var(--muted)">速率:</span> ' + d.txRate + ' Mbps</div>';
+  if (d.security !== '未知') detail += '<div><span style="color:var(--muted)">安全:</span> ' + d.security + '</div>';
+  if (d.snr !== 0) detail += '<div><span style="color:var(--muted)">信噪比:</span> ' + d.snr + ' dB</div>';
+  detail += '</div>';
+  if (d.rssi !== 0) {
+    const pct = Math.min(100, Math.max(0, (d.rssi + 100) * 2));
+    const barClass = pct > 70 ? 'good' : pct > 40 ? 'ok' : 'bad';
+    detail += '<div class="diag-bar"><div class="diag-bar-fill ' + barClass + '" style="width:' + pct + '%"></div></div>' +
+      '<span style="font-size:10px;color:var(--muted)">信号强度: ' + (q === 'excellent' ? '优秀' : q === 'good' ? '良好' : q === 'fair' ? '一般' : '较弱') + '</span>';
+  }
+  document.getElementById('wifi-detail').innerHTML = detail;
+}
+
+
+function renderPingDiag(d) {
+  showDiagCard('diag-ping');
+  const targets = (d && d.targets) ? d.targets : [];
+  if (targets.length === 0) {
+    setDiagStatus('ping', 'bad'); setDiagSummary('ping', '无法测试');
+    document.getElementById('ping-detail').textContent = 'Ping 测试失败';
+    return;
+  }
+  let worstLoss = 0, worstAvg = 0;
+  targets.forEach(t => { if (t.loss > worstLoss) worstLoss = t.loss; if (t.avg > worstAvg) worstAvg = t.avg; });
+  const status = worstLoss > 10 ? 'bad' : worstLoss > 0 ? 'warn' : 'ok';
+  setDiagStatus('ping', status);
+  setDiagSummary('ping', '平均 ' + Math.round(worstAvg) + 'ms · 丢包 ' + worstLoss + '%');
+  let h = '';
+  targets.forEach(t => {
+    h += '<div style="margin-bottom:5px"><span style="font-weight:600">' + t.label + ' (' + t.ip + ')</span>: min=' + t.min + 'ms avg=' + t.avg + 'ms max=' + t.max + 'ms 丢包=' + t.loss + '%</div>';
+  });
+  document.getElementById('ping-detail').innerHTML = h;
+}
+
+function renderDNSDiag(d) {
+  showDiagCard('diag-dns');
+  const servers = (d && d.servers) ? d.servers : [];
+  if (servers.length === 0) {
+    setDiagStatus('dns', 'bad'); setDiagSummary('dns', '无 DNS 数据');
+    document.getElementById('dns-detail').textContent = '无法获取 DNS 服务器信息';
+    return;
+  }
+  const slow = servers.filter(s => s.queryTimeMs > 200);
+  const status = slow.length > 0 ? 'warn' : 'ok';
+  setDiagStatus('dns', status);
+  setDiagSummary('dns', servers.length + ' 个服务器');
+  let h = '';
+  servers.forEach(s => {
+    const ms = s.queryTimeMs;
+    const cls = ms < 0 ? 'bad' : ms > 200 ? 'warn' : 'ok';
+    h += '<div style="margin-bottom:3px"><span style="font-weight:600">' + s.server + '</span>: <span style="color:var(--' + (cls === 'ok' ? 'green' : cls === 'warn' ? 'warning' : 'red') + ')">' + (ms < 0 ? '查询失败' : ms + ' ms') + '</span></div>';
+  });
+  document.getElementById('dns-detail').innerHTML = h;
+}
+
+function renderConnDiag(d) {
+  showDiagCard('diag-conn');
+  if (!d || d.connections === 0) {
+    setDiagStatus('conn', 'warn'); setDiagSummary('conn', '无活跃连接');
+    document.getElementById('conn-detail').textContent = '未检测到活跃的外部 TCP 连接';
+    return;
+  }
+  const rate = parseFloat(d.retransmitRate) || 0;
+  const status = rate > 10 ? 'bad' : rate > 3 ? 'warn' : 'ok';
+  setDiagStatus('conn', status);
+  setDiagSummary('conn', 'RTT: ' + d.avgRTT + 'ms · ' + d.connections + ' 连接');
+  document.getElementById('conn-detail').innerHTML =
+    '<div style="display:flex;gap:20px;flex-wrap:wrap">' +
+    '<div><span style="color:var(--muted)">活跃连接:</span> ' + d.connections + '</div>' +
+    '<div><span style="color:var(--muted)">平均 RTT:</span> ' + d.avgRTT + ' ms</div>' +
+    '<div><span style="color:var(--muted)">重传率:</span> <span style="color:var(--' + (status === 'ok' ? 'green' : status === 'warn' ? 'warning' : 'red') + ')">' + d.retransmitRate + '%</span></div>' +
+    '<div><span style="color:var(--muted)">重传包:</span> ' + d.totalRetx + '</div>' +
+    '<div><span style="color:var(--muted)">重复包:</span> ' + d.totalDupe + '</div>' +
+    '<div><span style="color:var(--muted)">乱序包:</span> ' + d.totalOOO + '</div>' +
+    '</div>';
+}
+
+function generateDiagSummary(wifi, ping, dns, conn) {
+  const issues = [];
+  // 有线
+  if (wifi && wifi.connectionType === 'wired') {
+    issues.push({severity: 'info', icon: '🔌', title: '有线网络连接', detail: (wifi.portName || '以太网') + (wifi.speed > 0 ? ' · ' + wifi.speed + ' Mbps' : '') + (wifi.ip ? ' · IP: ' + wifi.ip : '')});
+  }
+  // WiFi
+  if (wifi && wifi.wifiAvailable) {
+    if (wifi.signalQuality === 'poor') issues.push({severity: 'critical', icon: '📶', title: 'WiFi 信号极弱 (' + wifi.rssi + ' dBm)', detail: '网络可能频繁断开，建议靠近路由器或使用有线连接'});
+    else if (wifi.signalQuality === 'fair') issues.push({severity: 'warning', icon: '📶', title: 'WiFi 信号一般 (' + wifi.rssi + ' dBm)', detail: '建议靠近路由器，或切换到 5GHz 频段'});
+  } else if (wifi && !wifi.wifiAvailable) {
+    // not an issue — user may be on wired
+  }
+  // DNS - 显示优化建议
+  if (dns && dns.servers) {
+    const slowDNS = dns.servers.filter(s => s.queryTimeMs > 200);
+    if (slowDNS.length > 0) issues.push({severity: 'warning', icon: '🔍', title: 'DNS 解析较慢 (' + slowDNS[0].queryTimeMs + 'ms)', detail: '当前 DNS 响应时间过长，建议更换为 114.114.114.114 或 223.5.5.5'});
+    const failed = dns.servers.filter(s => s.queryTimeMs < 0);
+    if (failed.length > 0) issues.push({severity: 'critical', icon: '🔍', title: 'DNS 查询失败 (' + failed[0].server + ')', detail: 'DNS 服务器无响应，请检查网络设置'});
+    // DNS 优化推荐
+    if (dns.recommendations && dns.recommendations.length > 0) {
+      let recText = '推荐更换为更快的 DNS：';
+      dns.recommendations.forEach(r => { recText += r.name + ' (' + r.server + ')、'; });
+      recText = recText.slice(0, -1) + '。在「系统设置 → WiFi → 详细信息 → DNS」中修改';
+      issues.push({severity: 'info', icon: '💡', title: 'DNS 优化建议', detail: recText});
+    }
+  }
+  // Ping
+  if (ping && ping.targets) {
+    const lossTargets = ping.targets.filter(t => t.loss > 0);
+    if (lossTargets.length > 0) {
+      const worst = lossTargets.reduce((a, b) => a.loss > b.loss ? a : b);
+      issues.push({severity: worst.loss > 10 ? 'critical' : 'warning', icon: '📡', title: '检测到丢包 (' + worst.loss + '% — ' + worst.label + ')', detail: '可能存在网络拥堵或线路问题，尝试重启路由器'});
+    }
+    const highLatency = ping.targets.filter(t => t.avg > 100);
+    if (highLatency.length > 0) issues.push({severity: 'warning', icon: '⏱', title: '网络延迟较高 (' + Math.round(highLatency[0].avg) + 'ms)', detail: '可能影响视频通话和在线游戏体验'});
+  }
+  // Connection quality
+  if (conn && conn.connections > 0) {
+    const rate = parseFloat(conn.retransmitRate) || 0;
+    if (rate > 10) issues.push({severity: 'critical', icon: '🔄', title: 'TCP 重传率过高 (' + conn.retransmitRate + '%)', detail: '网络质量极不稳定，检查 WiFi 信号或联系运营商'});
+    else if (rate > 3) issues.push({severity: 'warning', icon: '🔄', title: 'TCP 重传率偏高 (' + conn.retransmitRate + '%)', detail: '网络质量不稳定，可能影响在线应用'});
+  }
+  if (issues.length === 0) {
+    issues.push({severity: 'success', icon: '✅', title: '网络状态良好', detail: '所有检查通过，网络连接正常'});
+  }
+
+  let h = '<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px">诊断结果</div>';
+  issues.forEach(issue => {
+    h += '<div class="issue-card ' + issue.severity + '"><div class="issue-title">' + issue.icon + ' ' + issue.title + '</div><div class="issue-detail">' + issue.detail + '</div></div>';
+  });
+  document.getElementById('diag-results').innerHTML = h;
+  document.getElementById('diag-results').style.display = 'block';
+}
+
+// ========== INIT ==========
+refreshSys(); setInterval(refreshSys, 3000);
+</script>
+</body>
+</html>
