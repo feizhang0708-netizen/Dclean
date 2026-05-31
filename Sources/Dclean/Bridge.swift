@@ -202,6 +202,10 @@ class Bridge: NSObject, WKScriptMessageHandler {
                 webView?.eval("window['\(cb)']('\(esc)')")
             }
 
+        case "cpuTemp":
+            let json = getTempJSON()
+            webView?.eval("window['\(cb)']('\(json)')")
+
         default: break
         }
     }
