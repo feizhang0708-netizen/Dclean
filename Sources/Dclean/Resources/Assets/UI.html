@@ -690,21 +690,40 @@ async function killSelectedProcs() {
 }
 
 // ========== UPDATE ==========
+const CUR_VERSION = 'v3.1';
 async function checkUpdate() {
-  document.getElementById('btn-update').disabled = true; document.getElementById('btn-update').textContent = '检查中...';
+  const btn = document.getElementById('btn-update');
+  btn.disabled = true; btn.textContent = '检查中...';
   document.getElementById('update-result').innerHTML = '';
   try {
     const resp = await fetch('https://api.github.com/repos/feizhang0708-netizen/Dclean/releases/latest');
     if (resp.ok) {
       const data = await resp.json();
-      document.getElementById('update-result').innerHTML = '<div style="margin-top:12px"><div class="net-card"><span style="font-size:16px;font-weight:700;color:var(--accent)">' + data.tag_name + '</span><div class="label">最新版本</div></div></div>';
+      const latest = data.tag_name || '';
+      const latestV = latest.replace(/^v/, '');
+      const curV = CUR_VERSION.replace(/^v/, '');
+      if (latestV > curV) {
+        document.getElementById('update-result').innerHTML =
+          '<div style="margin-top:12px;padding:14px 18px;background:rgba(255,179,71,.08);border-radius:10px;border:1px solid rgba(255,179,71,.2)">' +
+          '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">' +
+          '<span style="font-size:14px;font-weight:700;color:var(--warning)">发现新版本 ' + latest + '</span>' +
+          '<span style="font-size:11px;color:var(--muted)">当前 ' + CUR_VERSION + '</span></div>' +
+          '<a href="' + (data.html_url || 'https://github.com/feizhang0708-netizen/Dclean/releases/latest') +
+          '" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:8px 18px;background:var(--accent);color:#fff;border-radius:20px;text-decoration:none;font-size:13px;font-weight:600">' +
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>下载更新</a></div>';
+      } else {
+        document.getElementById('update-result').innerHTML =
+          '<div style="text-align:center;padding:12px;color:var(--green);font-size:13px;font-weight:600">✓ 当前已是最新版本 ' + CUR_VERSION + '</div>';
+      }
     } else {
-      document.getElementById('update-result').innerHTML = '<div style="text-align:center;padding:12px;color:var(--green);font-size:13px">当前已是最新版本 v3.0</div>';
+      document.getElementById('update-result').innerHTML =
+        '<div style="text-align:center;padding:12px;color:var(--muted);font-size:13px">检查失败，请稍后重试</div>';
     }
   } catch(e) {
-    document.getElementById('update-result').innerHTML = '<div style="text-align:center;padding:12px;color:var(--green);font-size:13px">当前已是最新版本 v3.0</div>';
+    document.getElementById('update-result').innerHTML =
+      '<div style="text-align:center;padding:12px;color:var(--muted);font-size:13px">网络不可用，无法检查更新</div>';
   }
-  document.getElementById('btn-update').disabled = false; document.getElementById('btn-update').textContent = '检查更新';
+  btn.disabled = false; btn.textContent = '检查更新';
 }
 
 // ========== NETWORK DIAGNOSTICS ==========
