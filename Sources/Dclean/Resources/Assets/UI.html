@@ -361,7 +361,7 @@ body::after{content:'';position:fixed;bottom:-20%;right:-15%;width:60%;height:60
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
       <span style="font-size:13px;font-weight:700;color:var(--text)">当前版本</span>
-      <span style="font-size:16px;font-weight:700;color:var(--accent)">v3.0</span>
+      <span style="font-size:16px;font-weight:700;color:var(--accent)">v3.1</span>
     </div>
     <div style="text-align:center;padding:20px 0" id="update-status">
       <button class="btn btn-primary" id="btn-update" onclick="checkUpdate()">检查更新</button>
@@ -696,7 +696,7 @@ async function checkUpdate() {
   document.getElementById('btn-update').disabled = true; document.getElementById('btn-update').textContent = '检查中...';
   document.getElementById('update-result').innerHTML = '';
   try {
-    const resp = await fetch('https://api.github.com/repos/user/dclean/releases/latest');
+    const resp = await fetch('https://api.github.com/repos/feizhang0708-netizen/Dclean/releases/latest');
     if (resp.ok) {
       const data = await resp.json();
       document.getElementById('update-result').innerHTML = '<div style="margin-top:12px"><div class="net-card"><span style="font-size:16px;font-weight:700;color:var(--accent)">' + data.tag_name + '</span><div class="label">最新版本</div></div></div>';
